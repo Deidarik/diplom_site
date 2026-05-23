@@ -53,31 +53,42 @@ class GNNRecommender:
                 imageUrl=info.get('imageUrl', 'https://via.placeholder.com/150')
             )
             
-    def computeScores(self, db_history, top_k=6):
+    def computeScores(self, db_history, top_k=12):
         if self.u_emb is None or self.i_emb is None:
             return []
             
-        # Веса действий
         weights = {'click': 1.0, 'like': 3.0, 'cart': 3.0, 'buy': 5.0}
         user_vector = np.zeros(self.i_emb.shape[1])
         observed_indices = []
         
-        # Инвертированный маппинг ASIN -> index
         asin_to_idx = {asin: idx for idx, asin in self.item_map.items()}
         
-        for interaction in db_history:
+        # 1. Берем только СВЕЖУЮ историю (последние 15 действий)
+        # Это сделает рекомендации очень отзывчивыми к новым кликам!
+        recent_history = sorted(db_history, key=lambda x: x.timestamp, reverse=True)[:15]
+        total_weight = 0.0
+        
+        for interaction in recent_history:
             asin = interaction.gamerId
             if asin in asin_to_idx:
                 idx = asin_to_idx[asin]
                 weight = weights.get(interaction.actionType, 1.0)
+                
                 user_vector += weight * self.i_emb[idx]
+                total_weight += weight
                 observed_indices.append(idx)
                 
-        if len(observed_indices) == 0:
-            return []
+        # 2. УСРЕДНЯЕМ ВЕКТОР, чтобы Score не улетал в бесконечность!
+        if total_weight > 0:
+            user_vector = user_vector / total_weight
+        else:
+            # Холодный старт
+            user_vector = np.ones(self.i_emb.shape[1]) * 0.01
             
         scores = np.dot(self.i_emb, user_vector)
-        scores[observed_indices] = -1e9 # Маскируем уже купленное/просмотренное
+        
+        if len(observed_indices) > 0:
+            scores[observed_indices] = -1e9 # Маскируем уже купленное/просмотренное
         
         top_indices = np.argsort(scores)[-top_k:][::-1]
         
