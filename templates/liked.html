@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4">Понравившееся (Избранное)</h2>
+
+{% if liked_games %}
+    <div class="row mb-5" id="liked-games-container">
+        {% for game in liked_games %}
+        <div class="col-md-3 mb-4" id="card-{{ game.gamerId }}">
+            <div class="card h-100 shadow-sm text-center border-0">
+                <img src="{{ game.imageUrl }}" class="card-img-top p-2" style="height: 180px; object-fit: contain;" onerror="this.src='https://via.placeholder.com/200'">
+                <div class="card-body d-flex flex-column">
+                    <h6 class="card-title">{{ game.title[:50] }}...</h6>
+                    <p class="text-success fw-bold mt-auto">${{ game.price }}</p>
+                    
+                    <a href="/item/{{ game.gamerId }}" class="btn btn-sm btn-outline-primary w-100 mb-2">Перейти к карточке</a>
+                    <!-- ТУТ ИСПРАВЛЕНА ОШИБКА: game.gamerId вместо item.gamerId и правильные кнопки -->
+                    <div class="d-flex gap-2">
+                        <button onclick="setLikedStatus(this, '{{ game.gamerId }}', 'remove_like')" class="btn btn-sm btn-outline-danger w-50">❌ Убрать</button>
+                        <button onclick="setLikedStatus(this, '{{ game.gamerId }}', 'cart')" class="btn btn-sm btn-outline-success w-50">🛒 В корзину</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info mb-5">В избранном пока пусто. Загляните в <a href="/">Каталог</a>!</div>
+{% endif %}
+
+<hr class="mb-5">
+
+<!-- БЛОК 2: Рекомендации с тумблером выбора модели -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Рекомендуем вам (на основе ваших интересов):</h4>
+    
+    <div class="form-check form-switch p-2 bg-white rounded shadow-sm border px-4">
+        <input class="form-check-input" type="checkbox" id="modelToggle" 
+               {% if active_model == "model2" %}checked{% endif %}
+               onchange="window.location.href='/toggle-model'">
+        <label class="form-check-label fw-bold text-secondary" for="modelToggle" style="margin-left: 10px; cursor: pointer;">
+            🤖 {% if active_model == "model2" %}DGCN (Advanced Graph){% else %}LightGCN V1 (Standard){% endif %}
+        </label>
+    </div>
+</div>
+
+<div class="row">
+    {% for rec in recommendations %}
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 border-0 shadow-sm text-center p-2 bg-white">
+            <img src="{{ rec.game.imageUrl }}" class="card-img-top" style="height: 120px; object-fit: contain;" onerror="this.src='https://via.placeholder.com/150'">
+            <div class="card-body p-2 d-flex flex-column">
+                <p class="small mb-1" style="font-size: 0.8rem;">{{ rec.game.title[:30] }}...</p>
+                <span class="badge bg-warning text-dark mb-1">Score: {{ "%.2f"|format(rec.score) }}</span>
+                <a href="/item/{{ rec.game.gamerId }}" class="btn btn-xs btn-outline-dark p-1 mb-1" style="font-size: 0.8rem;">Подробнее</a>
+                
+                <div class="d-flex gap-1 mt-auto">
+                    <!-- Используем глобальный setStatus(gamerId, actionType) для рекомендаций -->
+                    <button onclick="setStatus('{{ rec.game.gamerId }}', 'like')" class="btn btn-sm btn-outline-danger w-50 p-0">❤</button>
+                    <button onclick="setStatus('{{ rec.game.gamerId }}', 'cart')" class="btn btn-sm btn-outline-success w-50 p-0">🛒</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+// Функция ПЕРЕИМЕНОВАНА, чтобы не конфликтовать с base.html
+function setLikedStatus(buttonElement, gamerId, actionType) {
+    const formData = new FormData();
+    formData.append('gamerId', gamerId);
+    formData.append('actionType', actionType);
+
+    fetch('/status', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            if (actionType === 'remove_like') {
+                const card = document.getElementById(`card-${gamerId}`);
+                if (card) {
+                    card.style.transition = 'all 0.4s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.8)';
+                    setTimeout(() => {
+                        card.remove();
+                        const container = document.getElementById('liked-games-container');
+                        if (container && container.children.length === 0) {
+                            window.location.reload(); 
+                        }
+                    }, 400);
+                }
+            } else if (actionType === 'cart') {
+                buttonElement.className = "btn btn-sm btn-success w-50 disabled";
+                buttonElement.innerHTML = "В корзине";
+            }
+        }
+    })
+    .catch(error => console.error('Ошибка:', error));
+}
+</script>
+{% endblock %}

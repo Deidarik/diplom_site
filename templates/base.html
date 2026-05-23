@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ page_title | default("Магазин Игр") }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<!-- Navbar (Шапка сайта из ТЗ п.1) -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+  <div class="container">
+    <a class="navbar-brand" href="/">GNN Store</a>
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav ms-auto">
+        {% if user %}
+            <li class="nav-item"><a class="nav-link" href="/">Каталог</a></li>
+            <li class="nav-item"><a class="nav-link" href="/liked">Понравившееся</a></li>
+            <li class="nav-item"><a class="nav-link" href="/cart">Корзина</a></li>
+            <li class="nav-item"><a class="nav-link" href="/profile">Профиль ({{ user.login }})</a></li>
+            <li class="nav-item"><a class="nav-link text-danger" href="/logout">Выйти</a></li>
+        {% else %}
+            <li class="nav-item"><a class="nav-link" href="/login">Войти</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+    {% block content %}{% endblock %}
+</div>
+
+<!-- Скрипт для кнопок "Лайк", "В корзину", "Удалить" -->
+<script>
+async function setStatus(gamerId, actionType) {
+    let formData = new FormData();
+    formData.append('gamerId', gamerId);
+    formData.append('actionType', actionType);
+    
+    let response = await fetch('/status', {
+        method: 'POST',
+        body: formData
+    });
+    let result = await response.json();
+    if(result.status === 'success') {
+        // Перезагружаем страницу, чтобы обновить списки и интерфейс
+        window.location.reload(); 
+    } else {
+        alert("Ошибка авторизации");
+    }
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

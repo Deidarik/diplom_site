@@ -1,27 +1,87 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Automotive Catalog</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>.card-img-top { height: 180px; object-fit: contain; padding: 10px; }</style>
-</head>
-<body class="bg-light">
-    <div class="container mt-5">
-        <h1 class="text-center mb-5">Каталог автотоваров</h1>
-        <div class="row">
-            {% for item in items %}
-            <div class="col-md-3 mb-4">
-                <div class="card h-100 shadow-sm border-0 text-center">
-                    <img src="{{ item.img }}" class="card-img-top" onerror="this.src='https://via.placeholder.com/200?text=No+Image'">
-                    <div class="card-body">
-                        <small class="text-muted">{{ item.brand }}</small>
-                        <h6 class="card-title">{{ item.title }}...</h6>
-                        <a href="/item/{{ item.idx }}" class="btn btn-sm btn-outline-primary mt-2">Посмотреть</a>
-                    </div>
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Заголовок каталога + ТУМБЛЕР -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Каталог игр</h2>
+    
+    <!-- Глобальный тумблер выбора модели -->
+    <div class="form-check form-switch p-2 bg-white rounded shadow-sm border px-4">
+        <input class="form-check-input" type="checkbox" id="modelToggle" 
+               {% if active_model == "model2" %}checked{% endif %}
+               onchange="window.location.href='/toggle-model'">
+        <label class="form-check-label fw-bold text-secondary" for="modelToggle" style="margin-left: 10px; cursor: pointer;">
+            {% if active_model == "model2" %}DGCN (Advanced Graph){% else %}LightGCN V1 (Standard){% endif %}
+        </label>
+    </div>
+</div>
+
+<div class="row">
+    {% for item in items %}
+    <div class="col-md-3 mb-4">
+        <div class="card h-100 shadow-sm text-center border-0">
+            <img src="{{ item.imageUrl }}" class="card-img-top p-2" style="height: 200px; object-fit: contain;" onerror="this.src='https://via.placeholder.com/200'">
+            <div class="card-body d-flex flex-column">
+                <small class="text-muted">{{ item.brand }}</small>
+                <h6 class="card-title">{{ item.title[:50] }}...</h6>
+                <p class="text-success fw-bold mt-auto">${{ item.price }}</p>
+                
+                <!-- Кнопка перехода к карточке -->
+                <a href="/item/{{ item.gamerId }}" class="btn btn-sm btn-outline-primary w-100 mb-2">Посмотреть</a>
+                
+                <!-- Сплит кнопок управления: Лайк и Корзина на одной строке -->
+                <div class="d-flex gap-2">
+                    <button onclick="setCatalogStatus(this, '{{ item.gamerId }}', 'like')" class="btn btn-sm btn-outline-danger w-50">❤ Лайк</button>
+                    <button onclick="setCatalogStatus(this, '{{ item.gamerId }}', 'cart')" class="btn btn-sm btn-outline-success w-50">🛒 Купить</button>
                 </div>
             </div>
-            {% endfor %}
         </div>
     </div>
-</body>
-</html>
+    {% endfor %}
+</div>
+
+<!-- Пагинация Bootstrap -->
+<nav aria-label="Page navigation" class="mt-5">
+  <ul class="pagination justify-content-center shadow-sm">
+    <li class="page-item {% if not has_prev %}disabled{% endif %}">
+      <a class="page-link" href="?page={{ current_page - 1 }}">Назад</a>
+    </li>
+    <li class="page-item active">
+      <span class="page-link">Страница {{ current_page }} из {{ total_pages }}</span>
+    </li>
+    <li class="page-item {% if not has_next %}disabled{% endif %}">
+      <a class="page-link" href="?page={{ current_page + 1 }}">Вперед</a>
+    </li>
+  </ul>
+</nav>
+
+<script>
+function setCatalogStatus(buttonElement, gamerId, actionType) {
+    const formData = new FormData();
+    formData.append('gamerId', gamerId);
+    formData.append('actionType', actionType);
+
+    fetch('/status', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            if (actionType === 'like') {
+                buttonElement.className = "btn btn-sm btn-danger w-50 disabled";
+                buttonElement.innerHTML = "❤ Ок";
+            } else if (actionType === 'cart') {
+                buttonElement.className = "btn btn-sm btn-success w-50 disabled";
+                buttonElement.innerHTML = "🛒 Ок";
+            }
+        } else {
+            alert('Ошибка авторизации. Войдите заново.');
+            window.location.href = '/login';
+        }
+    })
+    .catch(error => console.error('Ошибка:', error));
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-4">Корзина</h2>
+
+{% if cart_games %}
+    <ul class="list-group mb-4 shadow-sm" id="cart-list">
+        {% for game in cart_games %}
+        <li class="list-group-item d-flex justify-content-between align-items-center" id="card-{{ game.gamerId }}">
+            <div>
+                <strong>{{ game.title[:60] }}</strong> <span class="text-success ms-2">${{ game.price }}</span>
+            </div>
+            <!-- ВЫЗОВ ПЕРЕИМЕНОВАННОЙ ФУНКЦИИ -->
+            <button onclick="setCartStatus(this, '{{ game.gamerId }}', 'remove_cart')" data-price="{{ game.price }}" class="btn btn-sm btn-outline-secondary">❌ Отменить</button>
+        </li>
+        {% endfor %}
+    </ul>
+    
+    <h4>Итого: <span class="text-success">$<span id="total-price-val">{{ total_price }}</span></span></h4>
+    <button class="btn btn-success btn-lg mt-3" id="checkout-btn" data-bs-toggle="modal" data-bs-target="#checkoutModal">Оформить заказ</button>
+{% else %}
+    <div class="alert alert-info">Ваша корзина пуста.</div>
+{% endif %}
+
+<!-- Модальное окно подтверждения -->
+<div class="modal fade" id="checkoutModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Подтверждение заказа</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Вы уверены, что хотите оплатить заказ на сумму <strong class="text-success">$<span id="modal-price-val">{{ total_price }}</span></strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-success" onclick="processCheckout()">Подтвердить оплату</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentTotalPrice = parseFloat("{{ total_price }}");
+
+// ПЕРЕИМЕНОВАЛИ В setCartStatus
+function setCartStatus(buttonElement, gamerId, actionType) {
+    const formData = new FormData();
+    formData.append('gamerId', gamerId);
+    formData.append('actionType', actionType);
+
+    fetch('/status', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            if (actionType === 'remove_cart') {
+                const itemPrice = parseFloat(buttonElement.getAttribute('data-price'));
+                const row = document.getElementById(`card-${gamerId}`);
+                if (row) {
+                    row.remove();
+                    
+                    // Перерасчет цены на лету
+                    currentTotalPrice = Math.max(0, currentTotalPrice - itemPrice);
+                    const formattedPrice = currentTotalPrice.toFixed(2);
+                    
+                    document.getElementById('total-price-val').innerText = formattedPrice;
+                    document.getElementById('modal-price-val').innerText = formattedPrice;
+                    
+                    const list = document.getElementById('cart-list');
+                    if (list && list.children.length === 0) {
+                        window.location.reload(); // Перезапуск для показа алерта пустоты
+                    }
+                }
+            }
+        }
+    })
+    .catch(error => console.error('Ошибка:', error));
+}
+
+async function processCheckout() {
+    try {
+        let response = await fetch('/checkout', { method: 'POST' });
+        let result = await response.json();
+        
+        if(result.status === 'success') {
+            let modalEl = document.getElementById('checkoutModal');
+            let modalObj = bootstrap.Modal.getInstance(modalEl);
+            if (modalObj) modalObj.hide();
+            
+            document.body.classList.remove('modal-open');
+            let backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(b => b.remove());
+
+            alert("Заказ успешно оформлен!");
+            window.location.href = "/profile";
+        } else {
+            alert("Произошла ошибка: " + (result.error || "Неизвестная ошибка"));
+        }
+    } catch (error) {
+        console.error("Ошибка чекаута:", error);
+        alert("Ошибка сети при оформлении заказа.");
+    }
+}
+</script>
+{% endblock %}
