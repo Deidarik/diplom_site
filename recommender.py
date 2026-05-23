@@ -28,23 +28,27 @@ class GNNRecommender:
 
     def loadData(self, pkl_path):
         if not os.path.exists(pkl_path):
-            print(f"Предупреждение: Файл {pkl_path} не найден. Используются заглушки.")
+            print(f"Ошибка: {pkl_path} не найден")
             return
             
         with open(pkl_path, 'rb') as f:
             data = pickle.load(f)
             
-        self.u_emb = data['u_emb']
-        self.i_emb = data['i_emb']
-        self.history = data.get('history', {})
-        self.item_map = data.get('item_map', {})
+        self.u_emb = data.get('u_emb')
+        self.i_emb = data.get('i_emb')
         
-        item_meta = data.get('item_meta', {})
+        # Загружаем item_map и принудительно делаем ключи INT (индексы), а значения STR (ASIN)
+        raw_map = data.get('item_map', {})
+        self.item_map = {int(k): str(v).strip() for k, v in raw_map.items()}
+        
+        # Пытаемся достать метаданные
+        meta = data.get('meta', data.get('item_meta', {}))
         self.gamesPool = {}
         
-        for idx, info in item_meta.items():
-            asin = info.get('asin', 'Unknown')
-            # Строго мапим поля во избежание сдвига параметров!
+        for idx, info in meta.items():
+            # Определяем ASIN (пробуем все варианты)
+            asin = str(info.get('asin') or info.get('parent_asin') or idx).strip()
+            
             self.gamesPool[asin] = VideoGame(
                 gamerId=asin,
                 title=info.get('title', 'Unknown Game'),
@@ -52,6 +56,7 @@ class GNNRecommender:
                 price=float(info.get('price', 29.99)),
                 imageUrl=info.get('imageUrl', 'https://via.placeholder.com/150')
             )
+        print(f"Загружена модель {pkl_path}: {len(self.gamesPool)} игр, {len(self.item_map)} маппингов")
             
     def computeScores(self, db_history, top_k=12):
         if self.u_emb is None or self.i_emb is None:

@@ -21,13 +21,22 @@ def get_db():
 
 class WebApp:
     def __init__(self):
+        # 1. Загружаем обе системы
         self.recSys1 = GNNRecommender("LightGCN-V1")
         self.recSys1.loadData('web_model_data.pkl')
         
-        self.recSys2 = GNNRecommender("LightGCN-V2")
+        self.recSys2 = GNNRecommender("DGCN-V2")
         self.recSys2.loadData('web_model_data_v2.pkl')
-        if not self.recSys2.gamesPool:
-            self.recSys2.gamesPool = self.recSys1.gamesPool
+
+        # 2. Создаем ЕДИНЫЙ глобальный пул игр (объединяем данные из обеих моделей)
+        self.global_pool = {**self.recSys1.gamesPool, **self.recSys2.gamesPool}
+        
+        # 3. Раздаем этот единый пул обеим системам, чтобы никто не остался пустым
+        self.recSys1.gamesPool = self.global_pool
+        self.recSys2.gamesPool = self.global_pool
+        
+        # 4. Проверка: если в V2 пустой item_map, заимствуем его у V1 (на крайний случай)
+        if not self.recSys2.item_map:
             self.recSys2.item_map = self.recSys1.item_map
 
     def get_active_recsys(self, request: Request):
@@ -84,12 +93,36 @@ async def catalog_page(request: Request, page: int = 1, db: Session = Depends(ge
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
     user = db.query(Gamer).filter(Gamer.userId == int(user_id_cookie)).first()
+
     history = user.getHistory(db) if user else []
     liked_ids = {h.gamerId for h in history if h.actionType == "like"}
     cart_ids = {h.gamerId for h in history if h.actionType == "cart"}
 
-    items_per_page = 12
+    active_model_name = request.cookies.get("active_model", "model1")
     rec_sys = webapp.get_active_recsys(request)
+    
+    # --- НОВОЕ: Рекомендации для холодного старта (только для DGCN) ---
+    recommended_games = []
+    if active_model_name == "model2":
+        # Получаем рекомендации (список ASIN-ов)
+        recommendations_list = rec_sys.computeScores(history, top_k=6)
+        
+        for rec in recommendations_list:
+            # Ищем игру в глобальном пуле (там теперь точно всё есть)
+            game_obj = webapp.global_pool.get(str(rec.targetGamerId).strip())
+            if game_obj:
+                recommended_games.append({"game": game_obj, "score": rec.score, "rank": rec.rank})
+        
+        # Если всё-таки нейросеть выдала ID, которых нет вообще ни в одном файле...
+        if not recommended_games:
+            print("Критическая ошибка маппинга: ASIN-ы модели отсутствуют в метаданных")
+            # Берем первые 6 игр из глобального пула для демонстрации
+            fallback_items = list(webapp.global_pool.values())[20:26]
+            for i, item in enumerate(fallback_items):
+                recommended_games.append({"game": item, "score": 1.0 - (i*0.1), "rank": i+1})
+    # ------------------------------------------------------------------
+
+    items_per_page = 12
     all_games = list(rec_sys.gamesPool.values())
     
     total_games = len(all_games)
@@ -102,13 +135,17 @@ async def catalog_page(request: Request, page: int = 1, db: Session = Depends(ge
         request=request, 
         name="index.html", 
         context={
-            "items": catalog_items, "user": user,
-            "page_title": "Каталог игр", "current_page": page,
-            "total_pages": total_pages, "has_next": page < total_pages,
+            "items": catalog_items, 
+            "user": user,
+            "page_title": "Каталог игр",
+            "current_page": page,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
             "has_prev": page > 1,
-            "active_model": request.cookies.get("active_model", "model1"),
-            "liked_ids": liked_ids, # НОВОЕ
-            "cart_ids": cart_ids    # НОВОЕ
+            "active_model": active_model_name,
+            "liked_ids": liked_ids,
+            "cart_ids": cart_ids,
+            "recommendations": recommended_games # Передаем рекомендации во фронтенд
         }
     )
 

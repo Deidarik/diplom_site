@@ -63,7 +63,48 @@
     </li>
   </ul>
 </nav>
+<!-- === НОВЫЙ БЛОК: Показ холодного старта для DGCN === -->
+{% if active_model == "model2" %}
+<hr class="mt-5 mb-4 border-2">
+<div class="p-4 bg-white rounded shadow-sm border border-info mb-5">
+    <div class="d-flex align-items-center mb-3">
+        <h3 class="mb-0 text-info fw-bold">🤖 DGCN в действии (Холодный старт)</h3>
+    </div>
+    <p class="text-muted">
+        Так как вы включили продвинутую графовую модель, она может рекомендовать игры даже если у вас пустая или короткая история, анализируя глобальные графы связей!
+    </p>
 
+    <div class="row mt-4">
+        {% for rec in recommendations %}
+        <div class="col-md-2 mb-3">
+            <div class="card h-100 border-0 shadow-sm text-center p-2" style="background-color: #f8f9fa;">
+                <img src="{{ rec.game.imageUrl }}" class="card-img-top" style="height: 120px; object-fit: contain;" onerror="this.src='https://via.placeholder.com/150'">
+                <div class="card-body p-2 d-flex flex-column">
+                    <p class="small mb-1 fw-bold" style="font-size: 0.8rem;">{{ rec.game.title[:30] }}...</p>
+                    <span class="badge bg-info text-white mb-2 shadow-sm">Score: {{ "%.2f"|format(rec.score) }}</span>
+                    
+                    <div class="d-flex flex-column gap-1 mt-auto">
+                        <a href="/item/{{ rec.game.gamerId }}" class="btn btn-xs btn-outline-dark w-100 p-1 mb-1" style="font-size: 0.75rem;">Подробнее</a>
+                        
+                        {% if rec.game.gamerId in liked_ids %}
+                            <button onclick="toggleStatus(this, '{{ rec.game.gamerId }}', 'remove_like', 'mini')" class="btn btn-sm btn-danger w-100" style="font-size: 0.75rem;">❌ Убрать</button>
+                        {% else %}
+                            <button onclick="toggleStatus(this, '{{ rec.game.gamerId }}', 'like', 'mini')" class="btn btn-sm btn-outline-danger w-100" style="font-size: 0.75rem;">❤ Лайк</button>
+                        {% endif %}
+
+                        {% if rec.game.gamerId in cart_ids %}
+                            <button onclick="toggleStatus(this, '{{ rec.game.gamerId }}', 'remove_cart', 'mini')" class="btn btn-sm btn-success w-100" style="font-size: 0.75rem;">❌ Из корзины</button>
+                        {% else %}
+                            <button onclick="toggleStatus(this, '{{ rec.game.gamerId }}', 'cart', 'mini')" class="btn btn-sm btn-outline-success w-100" style="font-size: 0.75rem;">🛒 Купить</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 <script>
 function setCatalogStatus(buttonElement, gamerId, actionType) {
     const formData = new FormData();
