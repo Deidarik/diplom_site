@@ -3,41 +3,42 @@
 
 <div class="row mb-5">
     <!-- Информация о профиле -->
-    <div class="col-md-4">
-        <div class="card shadow-sm">
-            <div class="card-body text-center">
-                <img src="https://via.placeholder.com/150" class="rounded-circle mb-3" alt="Аватар">
-                <h4>{{ user.login }}</h4>
-                <p class="text-muted">ID профиля: {{ user.userId }}</p>
-                <span class="badge bg-primary">Gamer Tier 1</span>
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body text-center d-flex flex-column justify-content-center align-items-center">
+                <img src="https://via.placeholder.com/150" class="rounded-circle mb-3 shadow-sm" alt="Аватар" style="border: 4px solid #fff; outline: 2px solid #0d6efd;">
+                <h3 class="fw-bold">{{ user.login }}</h3>
+                <p class="text-muted mb-3">ID профиля: <span class="badge bg-secondary">{{ user.userId }}</span></p>
+                <span class="badge bg-primary px-3 py-2" style="font-size: 1rem;">🏆 Gamer Tier 1</span>
             </div>
         </div>
     </div>
 
     <!-- Библиотека купленных игр -->
     <div class="col-md-8">
-        <h3 class="mb-4">Моя библиотека (Куплено)</h3>
+        <h3 class="mb-4 text-secondary border-bottom pb-2">🎮 Моя библиотека</h3>
         
         {% if bought_games %}
             <div class="row">
                 {% for game in bought_games %}
                 <div class="col-md-4 mb-4">
                     <div class="card h-100 shadow-sm border-success">
-                        <div class="card-header bg-success text-white text-center p-1">
-                            <small>Приобретено</small>
+                        <div class="card-header bg-success text-white text-center p-2 fw-bold">
+                            ✓ Приобретено
                         </div>
-                        <img src="{{ game.imageUrl }}" class="card-img-top p-2" style="height: 140px; object-fit: contain;" onerror="this.src='https://via.placeholder.com/150'">
-                        <div class="card-body text-center p-2">
-                            <p class="small fw-bold mb-1">{{ game.title[:45] }}...</p>
-                            <a href="/item/{{ game.gamerId }}" class="btn btn-sm btn-outline-success w-100 mt-2">Страница игры</a>
+                        <img src="{{ game.imageUrl }}" class="card-img-top p-3" style="height: 160px; object-fit: contain;" onerror="this.src='https://via.placeholder.com/150'">
+                        <div class="card-body text-center p-3 d-flex flex-column">
+                            <h6 class="small fw-bold mb-3">{{ game.title[:45] }}...</h6>
+                            <!-- mt-auto прижмет кнопку строго к низу карточки! -->
+                            <a href="/item/{{ game.gamerId }}" class="btn btn-sm btn-outline-success w-100 mt-auto fw-bold">Страница игры</a>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
         {% else %}
-            <div class="alert alert-secondary">
-                Вы еще не совершали покупок. Товары из <a href="/cart">корзины</a> после оплаты появятся здесь!
+            <div class="alert alert-secondary shadow-sm">
+                Вы еще не совершали покупок. Товары из <a href="/cart" class="fw-bold text-success">корзины</a> после оплаты появятся здесь!
             </div>
         {% endif %}
     </div>

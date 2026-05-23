@@ -84,6 +84,9 @@ async def catalog_page(request: Request, page: int = 1, db: Session = Depends(ge
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
     user = db.query(Gamer).filter(Gamer.userId == int(user_id_cookie)).first()
+    history = user.getHistory(db) if user else []
+    liked_ids = {h.gamerId for h in history if h.actionType == "like"}
+    cart_ids = {h.gamerId for h in history if h.actionType == "cart"}
 
     items_per_page = 12
     rec_sys = webapp.get_active_recsys(request)
@@ -99,14 +102,13 @@ async def catalog_page(request: Request, page: int = 1, db: Session = Depends(ge
         request=request, 
         name="index.html", 
         context={
-            "items": catalog_items, 
-            "user": user,
-            "page_title": "Каталог игр",
-            "current_page": page,
-            "total_pages": total_pages,
-            "has_next": page < total_pages,
+            "items": catalog_items, "user": user,
+            "page_title": "Каталог игр", "current_page": page,
+            "total_pages": total_pages, "has_next": page < total_pages,
             "has_prev": page > 1,
-            "active_model": request.cookies.get("active_model", "model1") # Передаем статус модели
+            "active_model": request.cookies.get("active_model", "model1"),
+            "liked_ids": liked_ids, # НОВОЕ
+            "cart_ids": cart_ids    # НОВОЕ
         }
     )
 
@@ -179,6 +181,8 @@ async def item_page(request: Request, gamerId: str, db: Session = Depends(get_db
     target_game = rec_sys.gamesPool.get(gamerId)
 
     history = user.getHistory(db)
+    liked_ids = {h.gamerId for h in history if h.actionType == "like"}
+    cart_ids = {h.gamerId for h in history if h.actionType == "cart"}
     recommendations_list = rec_sys.computeScores(history, top_k=6)
 
     recommended_games = []
@@ -192,7 +196,9 @@ async def item_page(request: Request, gamerId: str, db: Session = Depends(get_db
         request=request, name="item.html", 
         context={
             "target": target_game, "recommendations": recommended_games, "user": user,
-            "active_model": request.cookies.get("active_model", "model1")
+            "active_model": request.cookies.get("active_model", "model1"),
+            "liked_ids": liked_ids, # НОВОЕ
+            "cart_ids": cart_ids    # НОВОЕ
         }
     )
 
@@ -204,7 +210,8 @@ async def liked_page(request: Request, db: Session = Depends(get_db)):
 
     user = db.query(Gamer).filter(Gamer.userId == int(user_id_cookie)).first()
     history = user.getHistory(db)
-
+    liked_ids = {h.gamerId for h in history if h.actionType == "like"}
+    cart_ids = {h.gamerId for h in history if h.actionType == "cart"}
     rec_sys = webapp.get_active_recsys(request)
     liked_games = [rec_sys.gamesPool[h.gamerId] for h in history if h.actionType == "like" and h.gamerId in rec_sys.gamesPool]
         
@@ -216,7 +223,9 @@ async def liked_page(request: Request, db: Session = Depends(get_db)):
         request=request, name="liked.html", 
         context={
             "liked_games": liked_games, "recommendations": recommended_games, "user": user,
-            "active_model": request.cookies.get("active_model", "model1")
+            "active_model": request.cookies.get("active_model", "model1"),
+            "liked_ids": liked_ids, # НОВОЕ
+            "cart_ids": cart_ids    # НОВОЕ
         }
     )
 

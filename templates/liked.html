@@ -14,11 +14,22 @@
                     <p class="text-success fw-bold mt-auto">${{ game.price }}</p>
                     
                     <a href="/item/{{ game.gamerId }}" class="btn btn-sm btn-outline-primary w-100 mb-2">Перейти к карточке</a>
-                    <!-- ТУТ ИСПРАВЛЕНА ОШИБКА: game.gamerId вместо item.gamerId и правильные кнопки -->
+                    
+                    <!-- ИСПРАВЛЕНО: target заменен на game, а дизайн кнопок адаптирован под карточку ('catalog') -->
                     <div class="d-flex gap-2">
-                        <button onclick="setLikedStatus(this, '{{ game.gamerId }}', 'remove_like')" class="btn btn-sm btn-outline-danger w-50">❌ Убрать</button>
-                        <button onclick="setLikedStatus(this, '{{ game.gamerId }}', 'cart')" class="btn btn-sm btn-outline-success w-50">🛒 В корзину</button>
+                        {% if game.gamerId in liked_ids %}
+                            <button onclick="toggleStatus(this, '{{ game.gamerId }}', 'remove_like', 'catalog')" class="btn btn-sm btn-danger w-50">❌ Убрать</button>
+                        {% else %}
+                            <button onclick="toggleStatus(this, '{{ game.gamerId }}', 'like', 'catalog')" class="btn btn-sm btn-outline-danger w-50">❤ Лайк</button>
+                        {% endif %}
+
+                        {% if game.gamerId in cart_ids %}
+                            <button onclick="toggleStatus(this, '{{ game.gamerId }}', 'remove_cart', 'catalog')" class="btn btn-sm btn-success w-50">❌ Из корзины</button>
+                        {% else %}
+                            <button onclick="toggleStatus(this, '{{ game.gamerId }}', 'cart', 'catalog')" class="btn btn-sm btn-outline-success w-50">🛒 Купить</button>
+                        {% endif %}
                     </div>
+
                 </div>
             </div>
         </div>
@@ -55,9 +66,17 @@
                 <a href="/item/{{ rec.game.gamerId }}" class="btn btn-xs btn-outline-dark p-1 mb-1" style="font-size: 0.8rem;">Подробнее</a>
                 
                 <div class="d-flex gap-1 mt-auto">
-                    <!-- Используем глобальный setStatus(gamerId, actionType) для рекомендаций -->
-                    <button onclick="setStatus('{{ rec.game.gamerId }}', 'like')" class="btn btn-sm btn-outline-danger w-50 p-0">❤</button>
-                    <button onclick="setStatus('{{ rec.game.gamerId }}', 'cart')" class="btn btn-sm btn-outline-success w-50 p-0">🛒</button>
+                    {% if rec.game.gamerId in liked_ids %}
+                        <button onclick="toggleStatus(this, '{{ rec.game.gamerId }}', 'remove_like', 'mini')" class="btn btn-sm btn-danger w-50 p-0">❌</button>
+                    {% else %}
+                        <button onclick="toggleStatus(this, '{{ rec.game.gamerId }}', 'like', 'mini')" class="btn btn-sm btn-outline-danger w-50 p-0">❤</button>
+                    {% endif %}
+
+                    {% if rec.game.gamerId in cart_ids %}
+                        <button onclick="toggleStatus(this, '{{ rec.game.gamerId }}', 'remove_cart', 'mini')" class="btn btn-sm btn-success w-50 p-0">❌</button>
+                    {% else %}
+                        <button onclick="toggleStatus(this, '{{ rec.game.gamerId }}', 'cart', 'mini')" class="btn btn-sm btn-outline-success w-50 p-0">🛒</button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -65,41 +84,4 @@
     {% endfor %}
 </div>
 
-<script>
-// Функция ПЕРЕИМЕНОВАНА, чтобы не конфликтовать с base.html
-function setLikedStatus(buttonElement, gamerId, actionType) {
-    const formData = new FormData();
-    formData.append('gamerId', gamerId);
-    formData.append('actionType', actionType);
-
-    fetch('/status', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            if (actionType === 'remove_like') {
-                const card = document.getElementById(`card-${gamerId}`);
-                if (card) {
-                    card.style.transition = 'all 0.4s ease';
-                    card.style.opacity = '0';
-                    card.style.transform = 'scale(0.8)';
-                    setTimeout(() => {
-                        card.remove();
-                        const container = document.getElementById('liked-games-container');
-                        if (container && container.children.length === 0) {
-                            window.location.reload(); 
-                        }
-                    }, 400);
-                }
-            } else if (actionType === 'cart') {
-                buttonElement.className = "btn btn-sm btn-success w-50 disabled";
-                buttonElement.innerHTML = "В корзине";
-            }
-        }
-    })
-    .catch(error => console.error('Ошибка:', error));
-}
-</script>
 {% endblock %}

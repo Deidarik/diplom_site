@@ -31,9 +31,18 @@
                 
                 <!-- Сплит кнопок управления: Лайк и Корзина на одной строке -->
                 <div class="d-flex gap-2">
-                    <button onclick="setCatalogStatus(this, '{{ item.gamerId }}', 'like')" class="btn btn-sm btn-outline-danger w-50">❤ Лайк</button>
-                    <button onclick="setCatalogStatus(this, '{{ item.gamerId }}', 'cart')" class="btn btn-sm btn-outline-success w-50">🛒 Купить</button>
-                </div>
+    {% if item.gamerId in liked_ids %}
+        <button onclick="toggleStatus(this, '{{ item.gamerId }}', 'remove_like', 'catalog')" class="btn btn-sm btn-danger w-50">❌ Убрать</button>
+    {% else %}
+        <button onclick="toggleStatus(this, '{{ item.gamerId }}', 'like', 'catalog')" class="btn btn-sm btn-outline-danger w-50">❤ Лайк</button>
+    {% endif %}
+
+    {% if item.gamerId in cart_ids %}
+        <button onclick="toggleStatus(this, '{{ item.gamerId }}', 'remove_cart', 'catalog')" class="btn btn-sm btn-success w-50">❌ Из корзины</button>
+    {% else %}
+        <button onclick="toggleStatus(this, '{{ item.gamerId }}', 'cart', 'catalog')" class="btn btn-sm btn-outline-success w-50">🛒 Купить</button>
+    {% endif %}
+              </div>
             </div>
         </div>
     </div>

@@ -33,19 +33,36 @@
 
 <!-- Скрипт для кнопок "Лайк", "В корзину", "Удалить" -->
 <script>
-async function setStatus(gamerId, actionType) {
+async function toggleStatus(btn, gamerId, action, layout) {
     let formData = new FormData();
     formData.append('gamerId', gamerId);
-    formData.append('actionType', actionType);
-    
-    let response = await fetch('/status', {
-        method: 'POST',
-        body: formData
-    });
-    let result = await response.json();
-    if(result.status === 'success') {
-        // Перезагружаем страницу, чтобы обновить списки и интерфейс
-        window.location.reload(); 
+    formData.append('actionType', action);
+
+    let res = await fetch('/status', { method: 'POST', body: formData });
+    let data = await res.json();
+
+    if (data.status === 'success') {
+        if (action === 'like') {
+            btn.setAttribute('onclick', `toggleStatus(this, '${gamerId}', 'remove_like', '${layout}')`);
+            if (layout === 'catalog') { btn.className = "btn btn-sm btn-danger w-50"; btn.innerHTML = "❌ Убрать"; }
+            if (layout === 'main') { btn.className = "btn btn-danger btn-lg"; btn.innerHTML = "❤ В избранном (Убрать)"; }
+            if (layout === 'mini') { btn.className = "btn btn-sm btn-danger w-100"; btn.innerHTML = "❌ Убрать"; } // ИСПРАВЛЕНО
+        } else if (action === 'remove_like') {
+            btn.setAttribute('onclick', `toggleStatus(this, '${gamerId}', 'like', '${layout}')`);
+            if (layout === 'catalog') { btn.className = "btn btn-sm btn-outline-danger w-50"; btn.innerHTML = "❤ Лайк"; }
+            if (layout === 'main') { btn.className = "btn btn-outline-danger btn-lg"; btn.innerHTML = "❤ Понравилось"; }
+            if (layout === 'mini') { btn.className = "btn btn-sm btn-outline-danger w-100"; btn.innerHTML = "❤ Лайк"; } // ИСПРАВЛЕНО
+        } else if (action === 'cart') {
+            btn.setAttribute('onclick', `toggleStatus(this, '${gamerId}', 'remove_cart', '${layout}')`);
+            if (layout === 'catalog') { btn.className = "btn btn-sm btn-success w-50"; btn.innerHTML = "❌ Из корзины"; }
+            if (layout === 'main') { btn.className = "btn btn-success btn-lg"; btn.innerHTML = "В корзине (Убрать)"; }
+            if (layout === 'mini') { btn.className = "btn btn-sm btn-success w-100"; btn.innerHTML = "❌ Из корзины"; } // ИСПРАВЛЕНО
+        } else if (action === 'remove_cart') {
+            btn.setAttribute('onclick', `toggleStatus(this, '${gamerId}', 'cart', '${layout}')`);
+            if (layout === 'catalog') { btn.className = "btn btn-sm btn-outline-success w-50"; btn.innerHTML = "🛒 Купить"; }
+            if (layout === 'main') { btn.className = "btn btn-primary btn-lg"; btn.innerHTML = "Добавить в корзину"; }
+            if (layout === 'mini') { btn.className = "btn btn-sm btn-outline-success w-100"; btn.innerHTML = "🛒 В корзину"; } // ИСПРАВЛЕНО
+        }
     } else {
         alert("Ошибка авторизации");
     }

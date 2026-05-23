@@ -11,13 +11,22 @@
         <h3 class="text-success">${{ target.price }}</h3>
         <hr>
         <div class="d-grid gap-2 d-md-block">
-            <button onclick="setStatus('{{ target.gamerId }}', 'cart')" class="btn btn-primary btn-lg">Добавить в корзину</button>
-            <button onclick="setStatus('{{ target.gamerId }}', 'like')" class="btn btn-outline-danger btn-lg">❤ Понравилось</button>
+            {% if target.gamerId in cart_ids %}
+                <button onclick="toggleStatus(this, '{{ target.gamerId }}', 'remove_cart', 'main')" class="btn btn-success btn-lg">В корзине (Убрать)</button>
+            {% else %}
+                <button onclick="toggleStatus(this, '{{ target.gamerId }}', 'cart', 'main')" class="btn btn-primary btn-lg">Добавить в корзину</button>
+            {% endif %}
+
+            {% if target.gamerId in liked_ids %}
+                <button onclick="toggleStatus(this, '{{ target.gamerId }}', 'remove_like', 'main')" class="btn btn-danger btn-lg">❤ В избранном (Убрать)</button>
+            {% else %}
+                <button onclick="toggleStatus(this, '{{ target.gamerId }}', 'like', 'main')" class="btn btn-outline-danger btn-lg">❤ Понравилось</button>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<h4 class="mb-3">Рекомендуем вам (на основе просмотра):</h4>
+<h4 class="mb-3">Рекомендуем вам:</h4>
 <div class="row">
     {% for rec in recommendations %}
     <div class="col-md-2 mb-3">
@@ -25,13 +34,22 @@
             <img src="{{ rec.game.imageUrl }}" class="card-img-top" style="height: 120px; object-fit: contain;" onerror="this.src='https://via.placeholder.com/150'">
             <div class="card-body p-2 d-flex flex-column">
                 <p class="small mb-1" style="font-size: 0.8rem;">{{ rec.game.title[:30] }}...</p>
-                <span class="badge bg-warning text-dark mb-1">Score: {{ "%.2f"|format(rec.score) }}</span>
-                <a href="/item/{{ rec.game.gamerId }}" class="btn btn-xs btn-outline-dark p-1 mb-1" style="font-size: 0.8rem;">Подробнее</a>
+                <span class="badge bg-warning text-dark mb-2">Score: {{ "%.2f"|format(rec.score) }}</span>
                 
-                <!-- Кнопки управления (вызывают глобальный setStatus из base.html) -->
-                <div class="d-flex gap-1 mt-auto">
-                    <button onclick="setStatus('{{ rec.game.gamerId }}', 'like')" class="btn btn-sm btn-outline-danger w-50 p-0">❤</button>
-                    <button onclick="setStatus('{{ rec.game.gamerId }}', 'cart')" class="btn btn-sm btn-outline-success w-50 p-0">🛒</button>
+                <div class="d-flex flex-column gap-1 mt-auto">
+                    <a href="/item/{{ rec.game.gamerId }}" class="btn btn-xs btn-dark w-100 p-1 mb-1" style="font-size: 0.75rem;">Подробнее</a>
+                    
+                    {% if rec.game.gamerId in liked_ids %}
+                        <button onclick="toggleStatus(this, '{{ rec.game.gamerId }}', 'remove_like', 'mini')" class="btn btn-sm btn-danger w-100" style="font-size: 0.75rem;">❌ Убрать</button>
+                    {% else %}
+                        <button onclick="toggleStatus(this, '{{ rec.game.gamerId }}', 'like', 'mini')" class="btn btn-sm btn-outline-danger w-100" style="font-size: 0.75rem;">❤ Лайк</button>
+                    {% endif %}
+
+                    {% if rec.game.gamerId in cart_ids %}
+                        <button onclick="toggleStatus(this, '{{ rec.game.gamerId }}', 'remove_cart', 'mini')" class="btn btn-sm btn-success w-100" style="font-size: 0.75rem;">❌ Из корзины</button>
+                    {% else %}
+                        <button onclick="toggleStatus(this, '{{ rec.game.gamerId }}', 'cart', 'mini')" class="btn btn-sm btn-outline-success w-100" style="font-size: 0.75rem;">🛒 Купить</button>
+                    {% endif %}
                 </div>
             </div>
         </div>
